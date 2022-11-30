@@ -2,243 +2,160 @@
 
 ## Learning Goals
 
-- Modify database creation behavior in persistence context.
-- Read from the database.
-- Update database records.
-- Delete database records.
+- Define database creation behavior with the `hibernate.hbm2ddl.auto` property.
+- Read an entity from the database.
+- Update an entity in the database.
+- Delete an entity from the database.
 
 ## Introduction
 
-We have only been creating and inserting data up to now. In this lesson we will
-learn how to fetch, update, and delete records from the database. But before
-that, we need to change the database creation behavior so that it doesn’t drop
-and recreate the database every time the program is run.
+We have used JPA to persist an entity to the database.  In this lesson we will
+learn how to read, update, and delete an entity from the database. 
+We will also see how  to set database creation 
+behavior using the `hibernate.hbm2ddl.auto` property.
 
-## Change Persistence Context Behavior
+## Code Along
 
-This what our `persistence.xml` file currently looks like:
+We will continue with the project from the previous lesson.
+
+Add 3 new classes to the `org.example` package (make sure they are not created in org.example.model):
+
+1. JpaReadStudent
+2. JpaUpdateStudent
+3. JpaDeleteStudent
+
+
+Your project structure should look like this:
+
+![Final JPA project structure](https://curriculum-content.s3.amazonaws.com/6036/java-mod-5-jpa/jpa_final_project_structure.png)
+
+## Persistence Context Behavior
+
+The file `persistence.xml` currently looks like this:
 
 ```xml
 <persistence xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
              xsi:schemaLocation="http://java.sun.com/xml/ns/persistence
-                      http://java.sun.com/xml/ns/persistence/persistence_2_0.xsd"
+                         http://java.sun.com/xml/ns/persistence/persistence_2_0.xsd"
              version="2.0" xmlns="http://java.sun.com/xml/ns/persistence">
 
     <persistence-unit name="example" transaction-type="RESOURCE_LOCAL">
         <provider>org.hibernate.ejb.HibernatePersistence</provider>
         <properties>
             <!-- connect to database -->
-            <property name="javax.persistence.jdbc.url" value="jdbc:h2:tcp://localhost/~/test" />
-            <property name="javax.persistence.jdbc.driver" value="org.h2.Driver" />
-            <property name="javax.persistence.jdbc.user" value="sa" />
-            <property name="javax.persistence.jdbc.password" value="" />
+            <property name="javax.persistence.jdbc.driver" value="org.postgresql.Driver" /> <!-- DB Driver -->
+            <property name="javax.persistence.jdbc.url" value="jdbc:postgresql://localhost:5432/student_db" /> <!--DB URL-->
+            <property name="javax.persistence.jdbc.user" value="postgres" /> <!-- DB User -->
+            <property name="javax.persistence.jdbc.password" value="postgres" /> <!-- DB Password -->
             <!-- configure behavior -->
-            <property name="hibernate.show_sql" value="true"/>
-            <property name="hibernate.format_sql" value="true"/>
-            <property name="hibernate.dialect" value="org.hibernate.dialect.H2Dialect"/>
-            <property name="hibernate.hbm2ddl.auto" value="create-drop" />
+            <property name="hibernate.hbm2ddl.auto" value="create" /> <!-- create / create-drop / update -->
+            <property name="hibernate.dialect" value="org.hibernate.dialect.PostgreSQL94Dialect"/>
+            <property name="hibernate.show_sql" value="true" /> <!-- Show SQL in console -->
+            <property name="hibernate.format_sql" value="true" /> <!-- Show SQL formatted -->
         </properties>
     </persistence-unit>
 </persistence>
 ```
 
 The `hibernate.hbm2ddl.auto` property defines how database creation works when
-the program starts. Some of the common values are:
+the program starts. Some common values are:
 
 - `create-drop`: This drops all databases and creates new ones from scratch. It
   drops the database schema when the entity manager is closed using the
-  `entityManager.close()` method.
+  `entityManager.close()` method or when the `try-with-resources` statement completes.
 - `create`: It is similar to `create-drop` but it does not drop the database
-  tables when the entity manager is closed.
+  tables when the entity manager is closed.  
 - `validate`: Checks if the entity definitions match an existing table schema.
 - `update`: Does not drop databases. Only updates the table schema.
 - `none`: Does not make any changes to the database.
 
-We will be using the `create` value to create and insert data into the database
-and then use the `update` value for reading, updating, and deleting data.
+In the previous lessons, we used the `create` value to create and insert data into the database.
 
-Change the `hibernate.hbm2ddl.auto` value in the `persistence.xml` file to
-`create`:
+In this lesson, we will read, update, and delete data from the database.
+We need to change the `hibernate.hbm2ddl.auto` property to `update`
+to prevent the database from being recreated when we run JPA code.
 
-```java
-<property name="hibernate.hbm2ddl.auto" value="create" />
-```
-
-## Create and Insert Data
-
-We will rename our `JpaMain.java` file to `JpaCreate.java`. Make sure to use the
-“refactor” feature to rename the directory to prevent any errors. We will also
-explicitly close the `EntityManager` and `EntityManagerFactory` instances. If
-you run the following code, the H2 database in your machine should have the two
-student records.
+1. Update `persistence.xml` to set the `hibernate.hbm2ddl.auto` value to `update`:
+2. Be sure to save the file before proceeding.
 
 ```java
-// JpaCreate.java
-
-package org.example;
-
-import org.example.enums.StudentGroup;
-import org.example.models.Student;
-
-import javax.persistence.Persistence;
-import javax.persistence.EntityManagerFactory;
-import javax.persistence.EntityManager;
-import javax.persistence.EntityTransaction;
-import java.util.Date;
-
-public class JpaMain {
-    public static void main(String[] args) {
-        // create student instances
-        Student student1 = new Student();
-        student1.setName("Jack");
-        student1.setDob(new Date());
-        student1.setStudentGroup(StudentGroup.LOTUS);
-
-        Student student2 = new Student();
-        student2.setName("Leslie");
-        student2.setDob(new Date());
-        student2.setStudentGroup(StudentGroup.ROSE);
-
-        // create EntityManager
-        EntityManagerFactory entityManagerFactory = Persistence.createEntityManagerFactory("example");
-        EntityManager entityManager = entityManagerFactory.createEntityManager();
-
-        // access transaction object
-        EntityTransaction transaction = entityManager.getTransaction();
-
-        // create and use transactions
-        transaction.begin();
-        entityManager.persist(student1);
-        entityManager.persist(student2);
-        transaction.commit();
-
-        // close entity manager
-        entityManager.close();
-        entityManagerFactory.close();
-    }
-}
-```
-
-| ID  | DOB        | NAME   | STUDENTGROUP |
-| --- | ---------- | ------ | ------------ |
-| 1   | 2022-06-12 | Jack   | LOTUS        |
-| 2   | 2022-06-12 | Leslie | ROSE         |
-
-## Read Data
-
-We can read from the database regardless of what mode the `hbm2ddl` property
-value is. We will be using the `update` value for the `hbm2ddl` property because
-often times you will have to read from an existing database. Modify your
-`persistence.xml` file so that the following property has the `udpate` value:
-
-```xml
 <property name="hibernate.hbm2ddl.auto" value="update" />
 ```
 
-From this point on, we will perform the read, update, and delete operations in
-their own files. Create `JpaRead`, `JpaUpdate`, and `JpaDelete` files. Your
-directory should look like this:
+## Read Data
 
-```xml
-├── pom.xml
-└── src
-    ├── main
-    │   ├── java
-    │   │   └── org
-    │   │       └── example
-    │   │           ├── JpaCreate.java
-    │   │           ├── JpaDelete.java
-    │   │           ├── JpaRead.java
-    │   │           ├── JpaUpdate.java
-    │   │           ├── enums
-    │   │           │   └── StudentGroup.java
-    │   │           └── models
-    │   │               └── Student.java
-    │   └── resources
-    │       └── META-INF
-    │           └── persistence.xml
-    └── test
-        └── java
-```
+Now we will use JPA to fetch a student object from the database.
 
-We will also add a `toString()` method to the `Student` class so it’s easier to
-read values logged in the console.
-
-```java
-@Entity
-@Table(name = "STUDENT_DATA")
-public class Student {
-    @Id
-    @GeneratedValue
-    private int id;
-
-    private String name;
-
-    @Temporal(TemporalType.DATE)
-    private Date dob;
-
-    @Enumerated(EnumType.STRING)
-    private StudentGroup studentGroup;
-
-		// getters and setters
-
-    @Override
-    public String toString() {
-        return "Student{" +
-                "id=" + id +
-                ", name='" + name + '\'' +
-                ", dob=" + dob +
-                ", studentGroup=" + studentGroup +
-                '}';
-    }
-}
-```
-
-Open the `JpaRead` class and add the following code:
+Add the following code to the `JpaReadStudent` class:
 
 ```java
 package org.example;
 
-import org.example.models.Student;
-
+import org.example.model.Student;
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.Persistence;
 
-public class JpaRead {
+public class JpaReadStudent {
     public static void main(String[] args) {
         // create EntityManager
         EntityManagerFactory entityManagerFactory = Persistence.createEntityManagerFactory("example");
         EntityManager entityManager = entityManagerFactory.createEntityManager();
 
-        // get records
+        // get student data using primary key id=1
         Student student1 = entityManager.find(Student.class, 1);
         System.out.println(student1);
 
-        // close entity manager
+        // close entity manager and factory
         entityManager.close();
         entityManagerFactory.close();
     }
 }
 ```
 
-Output of running the `main` method:
+The steps to fetch a `Student` object from the database
+based on the primary key value are as follows:
 
-```java
-Student{id=1, name='Jack', dob=2022-06-12, studentGroup=LOTUS}
-Student{id=2, name='Leslie', dob=2022-06-12, studentGroup=ROSE}
+1. Use `EntityManagerFactory` to create a single instance of `EntityManager`.
+2. The `find` method returns a `Student` object based on the method parameters:
+    - `Student.class` indicates the entity class, which provides information about the database table and primary key.
+    - `1` indicates the primary key value.
+
+The `find` method returns null if the entity is not in the database.
+
+### Run `JpaReadStudent.main`
+
+1. Run the `JpaReadStudent.main` method. This will query the database for the student entity with `id=1`.
+2. In IntelliJ, check out the “Run” tab to see the exact query that Hibernate used
+   to find the entity.
+
+```text
+Hibernate: 
+    select
+        student0_.id as id1_0_0_,
+        student0_.dob as dob2_0_0_,
+        student0_.name as name3_0_0_,
+        student0_.studentGroup as studentg4_0_0_ 
+    from
+        STUDENT_DATA student0_ 
+    where
+        student0_.id=?
+
 ```
 
-We need an `EntityManager` for connecting to the database as before. The `find`
-method on the `EntityManager` instance can be used to query the data from the
-database. The first argument to `find` is the class reference of the entity we
-are fetching and the second argument is the unique identifier.
+The `JpaReadStudent.main` implicitly calls the `toString()` method to print the `Student` object state:
+
+```text
+Student{id=1, name='Jack', dob=2000-01-01, studentGroup=ROSE}
+```
+
 
 ## Update Data
 
-We want to change the first student’s `StudentGroup` value from `LOTUS` to
-`DAISY` in the database. Here are the steps we have to follow to update and
-persist the change:
+Now we will use JPA to update a student in the database.
+
+We will change the first student’s `StudentGroup` value from `ROSE` to
+`DAISY`. The steps to update and persist the change are as follows:
 
 1. Create an entity manager.
 2. Read the data from the database and create a local `Student` instance.
@@ -246,20 +163,20 @@ persist the change:
 4. Get the transaction from the entity manager.
 5. Persist the updated instance within a new transaction.
 
-Add the following code to the `JpaUpdate` class:
+Add the following code to the `JpaUpdateStudent` class:
 
 ```java
 package org.example;
 
-import org.example.enums.StudentGroup;
-import org.example.models.Student;
+import org.example.model.StudentGroup;
+import org.example.model.Student;
 
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.EntityTransaction;
 import javax.persistence.Persistence;
 
-public class JpaUpdate {
+public class JpaUpdateStudent {
     public static void main(String[] args) {
         // create EntityManager
         EntityManagerFactory entityManagerFactory = Persistence.createEntityManagerFactory("example");
@@ -284,18 +201,51 @@ public class JpaUpdate {
         entityManagerFactory.close();
     }
 }
+
 ```
 
 Notice that the process of creating an entity manager, getting the data from the
 database, and writing transactions is the exact same as what we used in the
-`JpaCreate` and `JpaRead` classes. We only had to update the `studentGroup`
+`JpaCreateStudent` and `JpaReadStudent`  classes. We only had to update the `studentGroup`
 property of the `student1` instance before persisting it to update the value in
 the database.
 
-| ID  | DOB        | NAME   | STUDENTGROUP |
-| --- | ---------- | ------ | ------------ |
-| 1   | 2022-06-12 | Jack   | DAISY        |
-| 2   | 2022-06-12 | Leslie | ROSE         |
+### Run `JpaUpdateStudent.main`
+
+1. Run the `JpaUpdateStudent.main` method to change the student group for student entity with `id=1`.
+2. In IntelliJ, check out the “Run” tab to see the exact query that Hibernate used
+   to find the entity.
+
+
+```text
+Hibernate: 
+    select
+        student0_.id as id1_0_0_,
+        student0_.dob as dob2_0_0_,
+        student0_.name as name3_0_0_,
+        student0_.studentGroup as studentg4_0_0_ 
+    from
+        STUDENT_DATA student0_ 
+    where
+        student0_.id=?
+Hibernate: 
+    update
+        STUDENT_DATA 
+    set
+        dob=?,
+        name=?,
+        studentGroup=? 
+    where
+        id=?
+
+```
+
+Run `JpaReadStudent.main` to query the student table to confirm the update:
+
+```text
+Student{id=1, name='Jack', dob=2000-01-01, studentGroup=DAISY}
+```
+
 
 ## Delete Data
 
@@ -306,21 +256,21 @@ deletion steps are similar to the update steps:
 2. Read the data from the database and create a local `Student` instance.
 3. Get the transaction from the entity manager.
 4. In the transaction, call the `remove` method on the entity manager and pass
-   it the `Student` instance you want to remove from the database.
+   it the `Student` instance to remove from the database.
 
-Here is what the `JpaDelete` class should look like:
+Here is what the `JpaDeleteStudent` class should look like:
 
 ```java
 package org.example;
 
-import org.example.models.Student;
+import org.example.model.Student;
 
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.EntityTransaction;
 import javax.persistence.Persistence;
 
-public class JpaDelete {
+public class JpaDeleteStudent {
     public static void main(String[] args) {
         // create EntityManager
         EntityManagerFactory entityManagerFactory = Persistence.createEntityManagerFactory("example");
@@ -344,13 +294,42 @@ public class JpaDelete {
 }
 ```
 
-And this is what the `STUDENT_DATA` table will look like after running the
-`main` method in the `JpaDelete` class.
 
-| ID  | DOB        | NAME   | STUDENTGROUP |
-| --- | ---------- | ------ | ------------ |
-| 1   | 2022-06-12 | Jack   | DAISY        |
-| 2   | 2022-06-12 | Leslie | ROSE         |
+### Run `JpaDeleteStudent.main`
+
+1. Run the `JpaDeleteStudent.main` method to delete the student entity with `id=1`.
+2. In IntelliJ, check out the “Run” tab to see the exact query that Hibernate used
+   to find the entity.
+
+```text
+Hibernate: 
+    select
+        student0_.id as id1_0_0_,
+        student0_.dob as dob2_0_0_,
+        student0_.name as name3_0_0_,
+        student0_.studentGroup as studentg4_0_0_ 
+    from
+        STUDENT_DATA student0_ 
+    where
+        student0_.id=?
+Hibernate: 
+    delete 
+    from
+        STUDENT_DATA 
+    where
+        id=?
+```
+
+Run `JpaReadStudent.main` query the student table to confirm the deletion.
+The program prints null since the student no longer exists in the database:
+
+```text
+null
+```
+
+You can also query the table in **pgAdmin** to confirm the row was deleted: 
+
+![JPA deleted student row](https://curriculum-content.s3.amazonaws.com/6036/java-mod-5-jpa/deleted_student.png)
 
 ## Revert Database Changes
 
@@ -358,18 +337,11 @@ We have made a few changes using the update and delete operation in our
 database. We will run the `JpaCreate` class to create the database from scratch
 and insert the data:
 
-1. Change the `hibernate.hbm2ddl.auto` value to `create`.
-2. Run the `main` method in the `JpaCreate` class.
-
-The `STUDENT_DATA` table should look like this:
-
-| ID  | DOB        | NAME   | STUDENTGROUP |
-| --- | ---------- | ------ | ------------ |
-| 1   | 2022-06-12 | Jack   | LOTUS        |
-| 2   | 2022-06-12 | Leslie | ROSE         |
+1. Edit `persistence.xml` to change the `hibernate.hbm2ddl.auto` value to `create`.
+2. Run `JpaCreateStudent.main` to recreate the database and populate the `STUDENT_DATA` table.
 
 ## Conclusion
 
 We have learned how to create, insert, read, update, and delete data from the
-database. These are essential operations that you are likely to perform in
+database, all without writing SQL! These are essential operations that you are likely to perform in
 pretty much any app that requires data persistence.
