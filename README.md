@@ -21,15 +21,15 @@ We will continue with the project from the previous lesson.
 
 Add 4 new classes to the `org.example` package (make sure they are not created in org.example.model):
 
-1. JpaReadStudent
-2. JpaQueryStudent
-3. JpaUpdateStudent
-4. JpaDeleteStudent
+1. JpaRead
+2. JpaQuery
+3. JpaUpdate
+4. JpaDelete
 
 
 Your project structure should look like this:
 
-![Final JPA project structure](https://curriculum-content.s3.amazonaws.com/6002/java-mod-5-jpa/final_project_structure.png)
+![Final JPA project structure](https://curriculum-content.s3.amazonaws.com/6036/java-mod-5-jpa/crud_project_structure.png)
 
 ## Persistence Context Behavior
 
@@ -89,7 +89,7 @@ to prevent the database from being recreated when we run JPA code.
 Now we will use JPA to fetch a student object from the database using the
 entity's primary key `id`.
 
-Add the following code to the `JpaReadStudent` class:
+Add the following code to the `JpaRead` class:
 
 ```java
 package org.example;
@@ -99,7 +99,7 @@ import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.Persistence;
 
-public class JpaReadStudent {
+public class JpaRead {
     public static void main(String[] args) {
         // create EntityManager
         EntityManagerFactory entityManagerFactory = Persistence.createEntityManagerFactory("example");
@@ -126,9 +126,9 @@ based on the primary key value are as follows:
 
 The `find` method returns null if the entity is not in the database.
 
-### Run `JpaReadStudent.main`
+### Run `JpaRead.main`
 
-1. Run the `JpaReadStudent.main` method. This will query the database for the student entity with `id=1`.
+1. Run the `JpaRead.main` method. This will query the database for the student entity with `id=1`.
 2. In IntelliJ, check out the “Run” tab to see the exact query that Hibernate used
    to find the entity.
 
@@ -146,7 +146,7 @@ Hibernate:
 
 ```
 
-The `JpaReadStudent.main` implicitly calls the `toString()` method to print the `Student` object state:
+The `JpaRead.main` implicitly calls the `toString()` method to print the `Student` object state:
 
 ```text
 Student{id=1, name='Jack', dob=2000-01-01, studentGroup=ROSE}
@@ -220,7 +220,7 @@ List<Student> students  =  query3.getResultList();
 
 
 
-Add the following code to the `JpaQueryStudent` class:
+Add the following code to the `JpaQuery` class:
 
 
 ```java
@@ -232,7 +232,7 @@ import javax.persistence.*;
 import java.time.LocalDate;
 import java.util.List;
 
-public class JpaQueryStudent {
+public class JpaQuery {
 
     public static void main(String[] args) {
         // create EntityManager
@@ -266,9 +266,9 @@ public class JpaQueryStudent {
 }
 ```
 
-### Run `JpaQueryStudent.main`
+### Run `JpaQuery.main`
 
-1. Run the `JpaQueryStudent.main` method. 
+1. Run the `JpaQuerymain` method. 
 2. In IntelliJ, check out the “Run” tab to see the exact queries that
    Hibernate used for the 3 queries, along with the print statement results:
 
@@ -323,7 +323,7 @@ We will change the first student’s `StudentGroup` value from `ROSE` to
 4. Get the transaction from the entity manager.
 5. Persist the updated instance within a new transaction.
 
-Add the following code to the `JpaUpdateStudent` class:
+Add the following code to the `JpaUpdate` class:
 
 ```java
 package org.example;
@@ -336,7 +336,7 @@ import javax.persistence.EntityManagerFactory;
 import javax.persistence.EntityTransaction;
 import javax.persistence.Persistence;
 
-public class JpaUpdateStudent {
+public class JpaUpdate {
     public static void main(String[] args) {
         // create EntityManager
         EntityManagerFactory entityManagerFactory = Persistence.createEntityManagerFactory("example");
@@ -366,13 +366,13 @@ public class JpaUpdateStudent {
 
 Notice that the process of creating an entity manager, getting the data from the
 database, and writing transactions is the exact same as what we used in the
-`JpaCreateStudent` and `JpaReadStudent`  classes. We only had to update the `studentGroup`
+`JpaCreate` and `JpaRead`  classes. We only had to update the `studentGroup`
 property of the `student1` instance before persisting it to update the value in
 the database.
 
-### Run `JpaUpdateStudent.main`
+### Run `JpaUpdate.main`
 
-1. Run the `JpaUpdateStudent.main` method to change the student group for student entity with `id=1`.
+1. Run the `JpaUpdate.main` method to change the student group for student entity with `id=1`.
 2. In IntelliJ, check out the “Run” tab to see the exact query that Hibernate used
    to find the entity.
 
@@ -400,7 +400,7 @@ Hibernate:
 
 ```
 
-Run `JpaReadStudent.main` to query the student table to confirm the update:
+Run `JpaRead.main` to query the student table to confirm the update:
 
 ```text
 Student{id=1, name='Jack', dob=2000-01-01, studentGroup=DAISY}
@@ -418,7 +418,7 @@ deletion steps are similar to the update steps:
 4. In the transaction, call the `remove` method on the entity manager and pass
    it the `Student` instance to remove from the database.
 
-Here is what the `JpaDeleteStudent` class should look like:
+Here is what the `JpaDelete` class should look like:
 
 ```java
 package org.example;
@@ -430,7 +430,7 @@ import javax.persistence.EntityManagerFactory;
 import javax.persistence.EntityTransaction;
 import javax.persistence.Persistence;
 
-public class JpaDeleteStudent {
+public class JpaDelete {
     public static void main(String[] args) {
         // create EntityManager
         EntityManagerFactory entityManagerFactory = Persistence.createEntityManagerFactory("example");
@@ -455,9 +455,9 @@ public class JpaDeleteStudent {
 ```
 
 
-### Run `JpaDeleteStudent.main`
+### Run `JpaDelete.main`
 
-1. Run the `JpaDeleteStudent.main` method to delete the student entity with `id=1`.
+1. Run the `JpaDelete.main` method to delete the student entity with `id=1`.
 2. In IntelliJ, check out the “Run” tab to see the exact query that Hibernate used
    to find the entity.
 
@@ -480,7 +480,7 @@ Hibernate:
         id=?
 ```
 
-Run `JpaReadStudent.main` query the student table to confirm the deletion.
+Run `JpaRead.main` query the student table to confirm the deletion.
 The program prints null since the student no longer exists in the database:
 
 ```text
@@ -499,7 +499,7 @@ database. We will run the `JpaCreate` class to create the database from scratch
 and insert the data:
 
 1. Edit `persistence.xml` to change the `hibernate.hbm2ddl.auto` value to `create`.
-2. Run `JpaCreateStudent.main` to recreate the database and populate the `STUDENT_DATA` table.
+2. Run `JpaCreate.main` to recreate the database and populate the `STUDENT_DATA` table.
 
 ## Conclusion
 
