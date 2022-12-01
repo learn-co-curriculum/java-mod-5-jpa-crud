@@ -4,6 +4,7 @@
 
 - Define database creation behavior with the `hibernate.hbm2ddl.auto` property.
 - Read an entity from the database.
+- Write JPQL to query the database.
 - Update an entity in the database.
 - Delete an entity from the database.
 
@@ -18,16 +19,17 @@ behavior using the `hibernate.hbm2ddl.auto` property.
 
 We will continue with the project from the previous lesson.
 
-Add 3 new classes to the `org.example` package (make sure they are not created in org.example.model):
+Add 4 new classes to the `org.example` package (make sure they are not created in org.example.model):
 
 1. JpaReadStudent
-2. JpaUpdateStudent
-3. JpaDeleteStudent
+2. JpaQueryStudent
+3. JpaUpdateStudent
+4. JpaDeleteStudent
 
 
 Your project structure should look like this:
 
-![Final JPA project structure](https://curriculum-content.s3.amazonaws.com/6036/java-mod-5-jpa/jpa_final_project_structure.png)
+![Final JPA project structure](https://curriculum-content.s3.amazonaws.com/6002/java-mod-5-jpa/final_project_structure.png)
 
 ## Persistence Context Behavior
 
@@ -84,7 +86,8 @@ to prevent the database from being recreated when we run JPA code.
 
 ## Read Data
 
-Now we will use JPA to fetch a student object from the database.
+Now we will use JPA to fetch a student object from the database using the
+entity's primary key `id`.
 
 Add the following code to the `JpaReadStudent` class:
 
@@ -149,6 +152,163 @@ The `JpaReadStudent.main` implicitly calls the `toString()` method to print the 
 Student{id=1, name='Jack', dob=2000-01-01, studentGroup=ROSE}
 ```
 
+
+## Java Persistence Query Language (JPQL)
+
+We just saw how to use the `find()` method of `EntityManager` to fetch an entity using the primary key.
+
+JPA provides additional ways to query the database using **Java Persistence Query Language (JPQL)**.
+JPQL is similar to SQL, but the queries are based on the entity model defined by the Java classes
+rather than database tables.
+
+For example, the JPQL to select all students from the database is:
+
+```java
+SELECT s from Student s
+```
+
+Notice we reference the `Student` entity instead of the `STUDENT_DATA` table,
+and assign the variable `s` to it. The variable is similar to a variable in Java code
+and can be used in other parts of the query. For example:
+
+```java
+select s FROM Student s WHERE s.studentGroup IN ('DAISY', 'ROSE')
+```
+
+JPQL is very powerful and supports many ways to query the database.
+We will look briefly at two interfaces in the `javax.persistence` package:
+
+1. Query
+2. TypedQuery
+
+The `Query` interface was developed for Java Persistence 1.0. 
+JPA can't deduce the type of the object returned when we use the `Query` interface
+methods, thus we need to cast as shown in the example below:
+
+```java
+//Create a Query object to get student based on dob.
+Query query1 = entityManager.createQuery("SELECT s FROM Student s WHERE s.dob='2000-01-01'");
+
+//Need to cast result to Student
+Student student1 =  (Student) query1.getSingleResult();
+```
+
+The `TypedQuery` interface was developed for Java Persistence 2.0 and
+lets us specify the entity type returned by a query, thus avoiding the need for casting.
+Both `Query` and `TypedQuery` support query parameters, similar to JDBC.
+Query parameters can be positional or named.  The example below uses a
+named parameter `:dob`:
+
+```java
+//Create a TypedQuery object.
+TypedQuery<Student> query2 = entityManager.createQuery("SELECT s FROM Student s WHERE s.dob=:dob", Student.class);
+
+//set the :dob placeholder in the query
+query2.setParameter("dob", LocalDate.of(1999,01,01));
+
+//no need to cast result since Student.class was passed to `createQuery` method
+Student student2 =  query2.getSingleResult();
+```
+
+The `getSingleResult` method returns a single `Student` entity.
+We can use the `getResultList` method to retrieve multiple entities:
+
+```java
+TypedQuery<Student> query3 = entityManager.createQuery("select s FROM Student s WHERE s.studentGroup IN ('DAISY', 'ROSE')", Student.class);
+List<Student> students  =  query3.getResultList();
+```
+
+
+
+Add the following code to the `JpaQueryStudent` class:
+
+
+```java
+package org.example;
+
+import org.example.model.Student;
+
+import javax.persistence.*;
+import java.time.LocalDate;
+import java.util.List;
+
+public class JpaQueryStudent {
+
+    public static void main(String[] args) {
+        // create EntityManager
+        EntityManagerFactory entityManagerFactory = Persistence.createEntityManagerFactory("example");
+        EntityManager entityManager = entityManagerFactory.createEntityManager();
+
+        //Create a Query object to get student based on dob.  Need to cast query result to Student
+        Query query1 = entityManager.createQuery("SELECT s FROM Student s WHERE s.dob='2000-01-01'");
+        //Need to cast result to Student
+        Student student1 =  (Student) query1.getSingleResult();
+        System.out.println(student1);
+
+        //Create a TypedQuery object.
+        TypedQuery<Student> query2 = entityManager.createQuery("SELECT s FROM Student s WHERE s.dob=:dob", Student.class);
+        //set the :dob placeholder in the query
+        query2.setParameter("dob", LocalDate.of(1999,01,01));
+        //no need to cast result since Student.class was passed to `createQuery` method
+        Student student2 =  query2.getSingleResult();
+        System.out.println(student2);
+
+        //Create a TypeQuery object and get a list of Student entities as a result
+        TypedQuery<Student> query3 = entityManager.createQuery("select s FROM Student s WHERE s.studentGroup IN ('DAISY', 'ROSE')", Student.class);
+        List<Student> students  =  query3.getResultList();
+        System.out.println(students);
+
+        // close entity manager and factory
+        entityManager.close();
+        entityManagerFactory.close();
+    }
+    
+}
+```
+
+### Run `JpaQueryStudent.main`
+
+1. Run the `JpaQueryStudent.main` method. 
+2. In IntelliJ, check out the “Run” tab to see the exact queries that
+   Hibernate used for the 3 queries, along with the print statement results:
+
+```text
+Hibernate: 
+    select
+        student0_.id as id1_0_,
+        student0_.dob as dob2_0_,
+        student0_.name as name3_0_,
+        student0_.studentGroup as studentg4_0_ 
+    from
+        STUDENT_DATA student0_ 
+    where
+        student0_.dob='2000-01-01'
+Student{id=1, name='Jack', dob=2000-01-01, studentGroup=ROSE}
+Hibernate: 
+    select
+        student0_.id as id1_0_,
+        student0_.dob as dob2_0_,
+        student0_.name as name3_0_,
+        student0_.studentGroup as studentg4_0_ 
+    from
+        STUDENT_DATA student0_ 
+    where
+        student0_.dob=?
+Student{id=2, name='Lee', dob=1999-01-01, studentGroup=DAISY}
+Hibernate: 
+    select
+        student0_.id as id1_0_,
+        student0_.dob as dob2_0_,
+        student0_.name as name3_0_,
+        student0_.studentGroup as studentg4_0_ 
+    from
+        STUDENT_DATA student0_ 
+    where
+        student0_.studentGroup in (
+            'DAISY' , 'ROSE'
+        )
+[Student{id=1, name='Jack', dob=2000-01-01, studentGroup=ROSE}, Student{id=2, name='Lee', dob=1999-01-01, studentGroup=DAISY}]
+```
 
 ## Update Data
 
@@ -331,6 +491,7 @@ You can also query the table in **pgAdmin** to confirm the row was deleted:
 
 ![JPA deleted student row](https://curriculum-content.s3.amazonaws.com/6036/java-mod-5-jpa/deleted_student.png)
 
+
 ## Revert Database Changes
 
 We have made a few changes using the update and delete operation in our
@@ -345,3 +506,10 @@ and insert the data:
 We have learned how to create, insert, read, update, and delete data from the
 database, all without writing SQL! These are essential operations that you are likely to perform in
 pretty much any app that requires data persistence.
+
+
+## Resources
+
+- [javax.persistence.EntityManager](https://docs.oracle.com/javaee/7/api/javax/persistence/EntityManager.html)    
+- [javax.persistence.Query](https://docs.oracle.com/javaee/7/api/javax/persistence/Query.html)  
+- [javax.persistence.TypedQuery](https://docs.oracle.com/javaee/7/api/javax/persistence/TypedQuery.html)  
